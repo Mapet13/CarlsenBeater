@@ -1,5 +1,3 @@
-from enum import Enum
-
 from requests_oauth2client import BearerAuth
 import requests
 import time
@@ -15,24 +13,27 @@ class Chess_board_pos:
 CHESS_BOARD_MIN_INDEX = 0
 CHESS_BOARD_MAX_INDEX = 7
 
-class Color(Enum):
+class Color:
     WHITE = 0
     BLACK = 1
 
-    def next(self):
-        if self == Color.WHITE:
+    @staticmethod
+    def next(color):
+        if color == Color.WHITE:
             return Color.BLACK
         else:
             return Color.WHITE
 
-    def into_fen(self):
-        if self == Color.WHITE:
+    @staticmethod
+    def into_fen(color):
+        if color == Color.WHITE:
             return "w"
         else:
             return "b"
         
-    def into_str(self):
-        if self == Color.WHITE:
+    @staticmethod
+    def into_str(color):
+        if color == Color.WHITE:
             return "white"
         else:
             return "black"
@@ -50,7 +51,7 @@ def replace_str_index(text,index=0,replacement=''):
 FEN_BOARD_SEPARATOR = "/"
 FEN_MAIN_SEPARATOR = " "
 
-class FEN_split_type(Enum):
+class FEN_split_type:
     BOARD = 0
     PLAYER = 1
     CASTLING = 2
@@ -67,19 +68,19 @@ class FEN_content:
         return " ".join(self.split)
     
     def get(self, split_type):
-        return self.split[split_type.value]
+        return self.split[split_type]
     
     def set(self, split_type, value):
-        self.split[split_type.value] = value
+        self.split[split_type] = value
 
     def get_color(self):
         return Color.from_fen(self.get(FEN_split_type.PLAYER))
     
     def set_color(self, color):
-        self.set(FEN_split_type.PLAYER, color.into_fen())
+        self.set(FEN_split_type.PLAYER, Color.into_fen(color))
 
     def toggle_player(self):
-        self.set_color(self.get_color().next())
+        self.set_color(Color.next(self.get_color()))
 
     def get_row(self, row):
         return self.get(FEN_split_type.BOARD).split(FEN_BOARD_SEPARATOR)[CHESS_BOARD_MAX_INDEX - row]
@@ -285,8 +286,8 @@ class Chess_game_controller:
 
     def new_start_game(self, color):
         self.player_color = color
-        self.enemy_color = color.next()
-        self.current_player = color if color == Color.WHITE else color.next()
+        self.enemy_color = Color.next(color)
+        self.current_player = color if color == Color.WHITE else Color.next(color)
         self.current_fen = FEN_constroller.get_initial_fen()
         self.calculated_best_move = None 
 
@@ -307,7 +308,7 @@ class Chess_game_controller:
         pass
     
     def accept_move(self):
-        self.current_player = self.current_player.next()
+        self.current_player = Color.next(self.current_player)
 
     def get_best_move(self):
         if self.current_player != self.player_color:
@@ -334,7 +335,7 @@ class Chess_game_controller:
             return
 
         self.current_fen = FEN_constroller.next_move(self.current_fen, move.move_from, move.move_to)
-        self.current_player = self.current_player.next()        
+        self.current_player = Color.next(self.current_player)        
         self.lichess_controller.make_move(move)
         self.calculated_best_move = None
 
