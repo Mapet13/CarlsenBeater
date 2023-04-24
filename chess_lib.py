@@ -1,4 +1,3 @@
-from requests_oauth2client import BearerAuth
 import requests
 import time
 
@@ -249,6 +248,9 @@ class Chess_lichess_game_data:
         return Chess_lichess_game_data(json["id"])
         
 
+def get_auth(token):
+    return {"Authorization": 'Bearer {}'.format(token)}
+
 #TODO after 5 moves resign and create new game with new fen XD
 class Lichess_api_controller:
     def __init__(self, token, lichess_game_data):
@@ -261,13 +263,14 @@ class Lichess_api_controller:
 
         payload = game_data.into_payload()
         headers = {"Content-Type": "application/json"}
+        headers.update(get_auth(token))
 
-        response = requests.post(url, headers=headers, json=payload, auth=BearerAuth(token))
+        response = requests.post(url, headers=headers, json=payload)
         return Lichess_api_controller(token, Chess_lichess_game_data.from_json(response.json()))
     
     def abandon_game(self):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/abort"
-        requests.post(url, auth=BearerAuth(self.token))
+        requests.post(url, headers=get_auth(self.token))
 
     def get_moves(self):
         url = f"https://lichess.org/game/export/{self.lichess_game_data.get_id()}"
@@ -276,7 +279,7 @@ class Lichess_api_controller:
     
     def make_move(self, move):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/move/" + move.get_UCI()
-        requests.post(url, auth=BearerAuth(self.token))
+        requests.post(url, headers=get_auth(self.token))
         pass
 
 
