@@ -1,5 +1,6 @@
 import requests
 import time
+import json
 
 class Chess_board_pos:
     def __init__(self, row, column):
@@ -8,6 +9,13 @@ class Chess_board_pos:
 
     def into_str(self):
         return chr(ord('a') + self.column) + str(self.row + 1)
+    
+    def __eq__(self, __value: object) -> bool:
+        return self.row == __value.row and self.column == __value.column
+    
+    @staticmethod
+    def from_str(str):
+        return Chess_board_pos(int(str[1]) - 1, ord(str[0]) - ord('a'))
 
 CHESS_BOARD_MIN_INDEX = 0
 CHESS_BOARD_MAX_INDEX = 7
@@ -72,6 +80,9 @@ class FEN_content:
     def set(self, split_type, value):
         self.split[split_type] = value
 
+    def get_rows(self):
+        return self.get(FEN_split_type.BOARD).split(FEN_BOARD_SEPARATOR)       
+    
     def get_color(self):
         return Color.from_fen(self.get(FEN_split_type.PLAYER))
     
@@ -108,24 +119,22 @@ class FEN_content:
             columns_before = self.count_columns_before_piece(fen_row, column)
             columns_needed = column - columns_before
             columns_after = int(current_piece) - columns_needed - 1
-            into_space = lambda x: str(x) if x > 1 else ""
+            into_space = lambda x: str(x) if x >= 1 else ""
             replacment = into_space(columns_needed) + piece + into_space(columns_after)
             self.set_row(row, replace_str_index(fen_row, pos_in_row, replacment))
 
 
     def get_pos_in_row_str(self, fen_row, column):
-        current_column_pos = 0
-        pos_in_text = 0
-        for c in fen_row:
-            if current_column_pos >= column:
-                return pos_in_text
-            
-            if c.isdigit():
-                current_column_pos += int(c)
-            else:
-                current_column_pos += 1
+        pos = CHESS_BOARD_MIN_INDEX
 
-            pos_in_text += 1
+        for id, c in enumerate(fen_row):
+            if c.isdigit():
+                pos += int(c)
+            else:
+                pos += 1
+
+            if pos > column:
+                return id
 
         return len(fen_row) - 1
     
@@ -135,7 +144,7 @@ class FEN_content:
             current_adding = int(c) if c.isdigit() else 1
 
             if current_column_pos + current_adding > column:
-                return current_column_pos
+                return current_column_pos 
             
             current_column_pos += current_adding
     
@@ -172,7 +181,43 @@ class FEN_constroller:
         piece = fen.pop_piece(move_from.row, move_from.column)
         fen.set_position(move_to.row, move_to.column, piece)
         return fen.into_str()
-        
+    
+    @staticmethod
+    def get_diff_move(prev_fen, next_fen): 
+        prev_fen = FEN_content(prev_fen)
+        next_fen = FEN_content(next_fen)
+
+        color_in_move = prev_fen.get_color()
+
+        diffs = []
+        for row in range(CHESS_BOARD_MAX_INDEX + 1):
+            for column in range(CHESS_BOARD_MAX_INDEX + 1):
+                pos_prev = prev_fen.get_position(row, column)
+                pos_next = next_fen.get_position(row, column)
+                if pos_prev != pos_next and not (pos_prev.isdigit() and pos_next.isdigit()):
+                    diffs.append((Chess_board_pos(row, column), pos_prev, pos_next))
+
+        if len(diffs) == 2:
+            first_pos, first_prev, first_next = diffs[0]
+            second_pos, second_prev, second_next = diffs[1]
+
+            if first_prev.isdigit():
+                return Chess_move(second_pos, first_pos)
+            if first_prev == second_next and first_next == second_prev or second_prev.isdigit():
+                return Chess_move(first_pos, second_pos)
+            else:
+                #TODO: captures
+                #TODO: promotion
+                #TODO: check en passant
+                #TODO: check castling
+                return Chess_move(first_pos, second_pos)
+        else:
+            print("0000000000000000000000000000000000000")
+            print("prev_fen: " + prev_fen.into_str())
+            print("next_fen: " + next_fen.into_str())
+            print("diffs: " + str(diffs))
+            print("0000000000000000000000000000000000000")
+            raise Exception("Unhandeled move")
 
 class ChessGame:
     def __init__(self, player_color):
@@ -220,6 +265,19 @@ class Chess_move:
     def get_UCI(self):
         return self.move_from.into_str() + self.move_to.into_str()
     
+    def __eq__(self, __value: object) -> bool:
+        return self.move_from == __value.move_from and self.move_to == __value.move_to
+    
+    def __str__(self) -> str:
+        return self.get_UCI()
+    
+    def __repr__(self) -> str:
+        return self.get_UCI()
+
+    @staticmethod
+    def from_UCI(UCI):
+        return Chess_move(Chess_board_pos.from_str(UCI[:2]), Chess_board_pos.from_str(UCI[2:]))
+
 class Game_data():
     def __init__(self, player_color, fen =  FEN_constroller.get_initial_fen()):
         self.level = 8
@@ -237,15 +295,19 @@ class Game_data():
 
 
 class Chess_lichess_game_data:
-    def __init__(self, id):
+    def __init__(self, id, creation_time):
         self.id = id
+        self.creation_time = creation_time
 
     def get_id(self):
         return self.id
 
+    def get_creation_time(self):
+        return self.creation_time
+
     @staticmethod
     def from_json(json):
-        return Chess_lichess_game_data(json["id"])
+        return Chess_lichess_game_data(json["id"], json["createdAt"])
         
 
 def get_auth(token):
@@ -282,6 +344,20 @@ class Lichess_api_controller:
         requests.post(url, headers=get_auth(self.token))
         pass
 
+    def get_game_fen(self):
+        url = f'https://lichess.org/api/stream/game/{self.lichess_game_data.get_id()}'
+        
+        with requests.get(url, headers=None, stream=True) as resp:
+            for line in resp.iter_lines():
+                line_str = line.decode("utf-8")
+                line_json = json.loads(line_str)
+                fen = line_json["fen"]
+                if fen:
+                    return FEN_content(fen)
+        return None 
+               
+
+
 
 class Chess_game_controller:
     def __init__(self, token):
@@ -308,11 +384,14 @@ class Chess_game_controller:
         pass
 
     def get_current_player(self):
-        pass
+        return self.current_player
     
     def accept_move(self):
         self.current_player = Color.next(self.current_player)
 
+    def reject_move(self, move):
+        pass
+        
     def get_best_move(self):
         if self.current_player != self.player_color:
             return
@@ -346,36 +425,44 @@ class Chess_game_controller:
         
 
 if __name__ == "__main__":
-    TOKEN = 'lip_eMBV2qjns7LExky0LRCs'
-    client_secrets = "eei_QPIYlTfWnRnA"
+    # TOKEN = 'lip_eMBV2qjns7LExky0LRCs'
+    # client_secrets = "eei_QPIYlTfWnRnA"
 
-    chess_game_controller = Chess_game_controller(TOKEN)
-    chess_game_controller.new_start_game(Color.WHITE)
+    # chess_game_controller = Chess_game_controller(TOKEN)
+    # chess_game_controller.new_start_game(Color.WHITE)
 
-    time.sleep(4)
+    # time.sleep(4)
 
-    moves = chess_game_controller.lichess_controller.get_moves()
-    print(moves)
-    print(chess_game_controller.get_best_move().move_to.into_str())
-    chess_game_controller.accept_move()
+    # moves = chess_game_controller.lichess_controller.get_moves()
+    # print(moves)
+    # print(chess_game_controller.get_best_move().move_to.into_str())
+    # chess_game_controller.accept_move()
 
-    time.sleep(4)
+    # chess_game_controller.lichess_controller.get_games()
 
-    move_from = Single_board_position_controller.from_str('e7')
-    move_to = Single_board_position_controller.from_str('e5')
-    chess_move = Chess_move(move_from, move_to)
+    # # time.sleep(4)
 
-    chess_game_controller.make_enemy_move(chess_move)
+    # # move_from = Single_board_position_controller.from_str('e7')
+    # # move_to = Single_board_position_controller.from_str('e5')
+    # # chess_move = Chess_move(move_from, move_to)
 
-    time.sleep(4)
+    # # chess_game_controller.make_enemy_move(chess_move)
 
-    moves = chess_game_controller.lichess_controller.get_moves()
-    print(moves)
+    # # time.sleep(4)
 
-    print(chess_game_controller.get_best_move().move_to.into_str())
-    chess_game_controller.accept_move()
+    # # moves = chess_game_controller.lichess_controller.get_moves()
+    # # print(moves)
+
+    # # print(chess_game_controller.get_best_move().move_to.into_str())
+    # # chess_game_controller.accept_move()
 
 
-    time.sleep(4)
+    # # time.sleep(4)
 
-    move = chess_game_controller.abandon_game() 
+    # chess_game_controller.abandon_game() 
+
+
+    prev_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    next_fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+
+    FEN_constroller.get_diff_move(prev_fen, next_fen)

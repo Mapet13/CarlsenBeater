@@ -1,4 +1,4 @@
-from chess_lib import FEN_constroller, FEN_content, Chess_board_pos
+from chess_lib import FEN_constroller, FEN_content, Chess_board_pos, Chess_move
 import unittest
 
 INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -55,6 +55,13 @@ class Test_FEN_content(unittest.TestCase):
         fen.set_position(2, 3, "Q")
         self.assertEqual(fen.into_str(), expected_fen)
 
+    def test_set_position_one_space_after_piece(self):
+        test_fen = "r1bqkbnr/ppp1pppp/2n5/3p4/3P4/2N5/PPP1PPPP/R1BQKBNR w KQkq - 0 1"
+        expected_fen = "r1bqkbnr/ppp1pppp/2n5/3p4/3P4/2N1B3/PPP1PPPP/R1BQKBNR w KQkq - 0 1"
+        fen = FEN_content(test_fen)
+        fen.set_position(2, 4, "B")
+        self.assertEqual(fen.into_str(), expected_fen)
+
     def test_pop_piece_surrounded(self):
         test_fen = "r1bqkbr1/pp2p1pp/2n2p1n/2ppP3/1PPP2PP/N7/P1P2P2/1RBQKBNR w KQkq - 0 1"
         expected_fen = "r1bqkbr1/pp2p1pp/2n2p1n/2ppP3/1P1P2PP/N7/P1P2P2/1RBQKBNR w KQkq - 0 1"
@@ -68,13 +75,55 @@ class Test_FEN_content(unittest.TestCase):
         fen = FEN_content(test_fen)
         fen.pop_piece(3, 3)
         self.assertEqual(fen.into_str(), expected_fen)
-
+    
     def test_pop_piece_after_space(self):
         test_fen = "r1bqkbr1/pp2p1pp/2n2p1n/2ppP3/1PPP2PP/N7/P1P2P2/1RBQKBNR w KQkq - 0 1"
         expected_fen = "r1bqkbr1/pp2p1pp/2n2p1n/2ppP3/1PPP3P/N7/P1P2P2/1RBQKBNR w KQkq - 0 1"
         fen = FEN_content(test_fen)
         fen.pop_piece(3, 6)
         self.assertEqual(fen.into_str(), expected_fen)
+
+
+    def test_get_position_piece_beteen_pieces(self):
+        test_fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+        row = 0
+        col = 2 
+        expected_piece = "B"
+
+        piece = FEN_content(test_fen).get_position(row, col)
+
+        self.assertEqual(piece, expected_piece)
+
+    def test_get_position_empty_line(self):
+        test_fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+        row = 2
+        expected_piece = "8"
+
+        BOARD_SIZE = 8
+        for col in range(BOARD_SIZE):
+            piece = FEN_content(test_fen).get_position(row, col)
+            self.assertEqual(piece, expected_piece)
+
+    def test_get_position_single_piece_middle_of_line(self):
+        test_fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+        row = 3
+        piece_col = 3
+        expected_piece = "P"
+        expected_before = "3"
+        expected_after = "4"
+
+        BOARD_SIZE = 8
+        for col in range(BOARD_SIZE):
+            if col == piece_col:
+                piece = FEN_content(test_fen).get_position(row, col)
+                self.assertEqual(piece, expected_piece)
+            elif col < piece_col:   
+                piece = FEN_content(test_fen).get_position(row, col)
+                self.assertEqual(piece, expected_before)
+            else:
+                piece = FEN_content(test_fen).get_position(row, col)
+                self.assertEqual(piece, expected_after)
+
         
 class Test_FEN_controller(unittest.TestCase):
     def test_get_initial_fen(self):
@@ -127,6 +176,43 @@ class Test_FEN_controller(unittest.TestCase):
         move_to = Chess_board_pos(2, 2)
         result = FEN_constroller.next_move(test_fen, move_from, move_to)
         self.assertEqual(result, EXPECTED_FEN)
+
+    def test_move_one_space_after_piece(self):
+        test_fen     = "r1bqkbnr/ppp1pppp/2n5/3p4/3P4/2N5/PPP1PPPP/R1BQKBNR w KQkq - 0 1"
+        EXPECTED_FEN = "r1bqkbnr/ppp1pppp/2n5/3p4/3P4/2N1B3/PPP1PPPP/R2QKBNR b KQkq - 0 1"
+
+        move_from = Chess_board_pos.from_str("c1")
+        move_to = Chess_board_pos.from_str("e3")
+
+        result = FEN_constroller.next_move(test_fen, move_from, move_to)
+        self.assertEqual(result, EXPECTED_FEN)
+
+    def test_get_diff_move_single_moves(self):
+        initial = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        moves = [
+            "d2d4",
+            "d7d5",
+            "b1c3",
+            "b8c6",
+            "c1f4",
+            "g8f6",
+            "e2e3",
+            "e7e6",
+            "f1d3",
+            "f8e7",
+            "g1f3",
+        ]
+
+        last_fen = initial
+        for move in moves:
+            move_board = Chess_move.from_UCI(move)
+            print(move_board.move_from.into_str(), move_board.move_to.into_str())
+            next_fen = FEN_constroller.next_move(last_fen, move_board.move_from, move_board.move_to)
+            move = FEN_constroller.get_diff_move(last_fen, next_fen)
+            print(move, " - ", move_board, "; ", last_fen, " -> ", next_fen)
+            self.assertEqual(move, move_board)
+            last_fen = next_fen
+            
 
 if __name__ == '__main__':
     unittest.main()
