@@ -13,6 +13,12 @@ class Chess_board_pos:
     def __eq__(self, __value: object) -> bool:
         return self.row == __value.row and self.column == __value.column
     
+    def __str__(self) -> str:
+        return self.into_str()
+    
+    def __repr__(self) -> str:
+        return self.into_str()
+    
     @staticmethod
     def from_str(str):
         return Chess_board_pos(int(str[1]) - 1, ord(str[0]) - ord('a'))
@@ -184,8 +190,6 @@ class FEN_constroller:
         prev_fen = FEN_content(prev_fen)
         next_fen = FEN_content(next_fen)
 
-        color_in_move = prev_fen.get_color()
-
         diffs = []
         for row in range(CHESS_BOARD_MAX_INDEX + 1):
             for column in range(CHESS_BOARD_MAX_INDEX + 1):
@@ -203,11 +207,16 @@ class FEN_constroller:
             if first_prev == second_next and first_next == second_prev or second_prev.isdigit():
                 return Chess_move(first_pos, second_pos)
             else:
+                color_in_move = prev_fen.get_color()
+                if color_in_move == Color.WHITE and first_prev.isupper() or color_in_move == Color.BLACK and first_prev.islower():
+                    return Chess_move(first_pos, second_pos)
+                else:
+                    return Chess_move(second_pos, first_pos)
                 #TODO: captures
                 #TODO: promotion
                 #TODO: check en passant
                 #TODO: check castling
-                return Chess_move(first_pos, second_pos)
+                
         else:
             print("0000000000000000000000000000000000000")
             print("prev_fen: " + prev_fen.into_str())
@@ -253,6 +262,7 @@ class Single_board_position_controller:
 
     def get(self):
         return self.move
+    
     
 class Chess_move:
     def __init__(self, move_from, move_to):

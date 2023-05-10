@@ -187,6 +187,17 @@ class Test_FEN_controller(unittest.TestCase):
         result = FEN_constroller.next_move(test_fen, move_from, move_to)
         self.assertEqual(result, EXPECTED_FEN)
 
+
+    def assert_moves_diffs(self, initial_fen, moves):
+        last_fen = initial_fen
+        for move in moves:
+            move_board = Chess_move.from_UCI(move)
+            next_fen = FEN_constroller.next_move(last_fen, move_board.move_from, move_board.move_to)
+            move = FEN_constroller.get_diff_move(last_fen, next_fen)
+            print(move, " - ", move_board, "; ", last_fen, " -> ", next_fen)
+            self.assertEqual(move, move_board)
+            last_fen = next_fen
+
     def test_get_diff_move_single_moves(self):
         initial = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         moves = [
@@ -203,15 +214,23 @@ class Test_FEN_controller(unittest.TestCase):
             "g1f3",
         ]
 
-        last_fen = initial
-        for move in moves:
-            move_board = Chess_move.from_UCI(move)
-            print(move_board.move_from.into_str(), move_board.move_to.into_str())
-            next_fen = FEN_constroller.next_move(last_fen, move_board.move_from, move_board.move_to)
-            move = FEN_constroller.get_diff_move(last_fen, next_fen)
-            print(move, " - ", move_board, "; ", last_fen, " -> ", next_fen)
-            self.assertEqual(move, move_board)
-            last_fen = next_fen
+        self.assert_moves_diffs(initial, moves)
+
+    def test_get_diff_move_with_captures(self):
+        initial = "r2qk2r/ppp2ppp/2nb1n2/3ppb2/3P4/2NQBNPB/PPP1PP1P/R3K2R b KQkq - 2 5"
+        moves = [
+            "e5d4",
+            "f3d4",
+            "f5d3",
+            "c3d5",
+            "f6d5",
+            "d4c6",
+            "d5e3",
+            "c6d8",
+            "e3c2",
+        ]
+
+        self.assert_moves_diffs(initial, moves)
             
 
 if __name__ == '__main__':
