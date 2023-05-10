@@ -128,10 +128,7 @@ class FEN_content:
         pos = CHESS_BOARD_MIN_INDEX
 
         for id, c in enumerate(fen_row):
-            if c.isdigit():
-                pos += int(c)
-            else:
-                pos += 1
+            pos += int(c) if c.isdigit() else 1
 
             if pos > column:
                 return id
