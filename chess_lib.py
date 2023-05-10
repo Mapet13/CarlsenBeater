@@ -212,11 +212,20 @@ class FEN_constroller:
                     return Chess_move(first_pos, second_pos)
                 else:
                     return Chess_move(second_pos, first_pos)
-                #TODO: captures
-                #TODO: promotion
                 #TODO: check en passant
-                #TODO: check castling
-                
+        elif len(diffs) == 4:
+            print(diffs)
+            KING_SIGN = "K"
+            first_pos = None
+            second_pos = None
+            for pos, prev, next in diffs:
+                if prev.upper() == KING_SIGN:
+                    first_pos = pos
+                elif next.upper() == KING_SIGN:
+                    second_pos = pos
+            return Chess_move(first_pos, second_pos)
+                    
+            
         else:
             print("0000000000000000000000000000000000000")
             print("prev_fen: " + prev_fen.into_str())

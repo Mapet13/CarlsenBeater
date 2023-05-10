@@ -194,7 +194,6 @@ class Test_FEN_controller(unittest.TestCase):
             move_board = Chess_move.from_UCI(move)
             next_fen = FEN_constroller.next_move(last_fen, move_board.move_from, move_board.move_to)
             move = FEN_constroller.get_diff_move(last_fen, next_fen)
-            print(move, " - ", move_board, "; ", last_fen, " -> ", next_fen)
             self.assertEqual(move, move_board)
             last_fen = next_fen
 
@@ -231,6 +230,29 @@ class Test_FEN_controller(unittest.TestCase):
         ]
 
         self.assert_moves_diffs(initial, moves)
+
+    def test_get_diff_move_simple_promotion(self):
+        before = "rn2kbnr/ppPqpppp/3pb3/8/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 5"
+        after = "rnQ1kbnr/pp1qpppp/3pb3/8/8/8/PPP1PPPP/RNBQKBNR b KQkq - 0 5"
+        move_board = Chess_move.from_UCI("c7c8")
+        move = FEN_constroller.get_diff_move(before, after)
+        self.assertEqual(move, move_board)
+
+    def test_get_diff_move_promotion_with_capture(self):
+        before = "rn2kbnr/ppPqpppp/3pb3/8/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 5"
+        after = "rN2kbnr/pp1qpppp/3pb3/8/8/8/PPP1PPPP/RNBQKBNR b KQkq - 0 5"
+        move_board = Chess_move.from_UCI("c7b8")
+        move = FEN_constroller.get_diff_move(before, after)
+        self.assertEqual(move, move_board)
+
+    def test_get_diff_castle_king_site(self):
+        before = "r2q1bnr/pp1kpppp/n1pp4/8/2b5/N1PP1NP1/PPQBPPBP/R3K2R w KQ - 5 9"
+        after = "r2q1bnr/pp1kpppp/n1pp4/8/2b5/N1PP1NP1/PPQBPPBP/R4RK1 b - - 6 9"
+        move_board = Chess_move.from_UCI("e1g1")
+        move = FEN_constroller.get_diff_move(before, after)
+        self.assertEqual(move, move_board)
+        
+        
             
 
 if __name__ == '__main__':
