@@ -245,10 +245,31 @@ class Test_FEN_controller(unittest.TestCase):
         move = FEN_constroller.get_diff_move(before, after)
         self.assertEqual(move, move_board)
 
-    def test_get_diff_castle_king_site(self):
+    def test_get_diff_white_castle_king_site(self):
         before = "r2q1bnr/pp1kpppp/n1pp4/8/2b5/N1PP1NP1/PPQBPPBP/R3K2R w KQ - 5 9"
         after = "r2q1bnr/pp1kpppp/n1pp4/8/2b5/N1PP1NP1/PPQBPPBP/R4RK1 b - - 6 9"
         move_board = Chess_move.from_UCI("e1g1")
+        move = FEN_constroller.get_diff_move(before, after)
+        self.assertEqual(move, move_board)
+
+    def test_get_diff_white_castle_queen_site(self):
+        before = "r2q1bnr/pp1kpppp/n1pp4/8/2b5/N1PP1NP1/PPQBPPBP/R3K2R w KQ - 5 9"
+        after = "r2q1bnr/pp1kpppp/n1pp4/8/2b5/N1PP1NP1/PPQBPPBP/2KR3R b - - 6 1"
+        move_board = Chess_move.from_UCI("e1c1")
+        move = FEN_constroller.get_diff_move(before, after)
+        self.assertEqual(move, move_board)
+
+    def test_get_diff_black_castle_king_site(self):
+        before = "r3k2r/pppbqpbp/2nppnp1/8/3P4/1PP1PPP1/P2NK2P/R1BQ1BNR b kq - 2 9"
+        after = "r4rk1/pppbqpbp/2nppnp1/8/3P4/1PP1PPP1/P2NK2P/R1BQ1BNR w - - 3 10"
+        move_board = Chess_move.from_UCI("e8g8")
+        move = FEN_constroller.get_diff_move(before, after)
+        self.assertEqual(move, move_board)
+
+    def test_get_diff_black_castle_queen_site(self):
+        before = "r3k2r/pppbqpbp/2nppnp1/8/3P4/1PP1PPP1/P2NK2P/R1BQ1BNR b kq - 2 9"
+        after = "2kr3r/pppbqpbp/2nppnp1/8/3P4/1PP1PPP1/P2NK2P/R1BQ1BNR w - - 3 10"
+        move_board = Chess_move.from_UCI("e8c8")
         move = FEN_constroller.get_diff_move(before, after)
         self.assertEqual(move, move_board)
         
