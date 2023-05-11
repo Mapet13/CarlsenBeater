@@ -198,7 +198,13 @@ class FEN_constroller:
                 if pos_prev != pos_next and not (pos_prev.isdigit() and pos_next.isdigit()):
                     diffs.append((Chess_board_pos(row, column), pos_prev, pos_next))
 
-        if len(diffs) == 2:
+        SIMPLE_MOVE_DIFFS_COUNT = 2
+        CATLING_MOVE_DIFFS_COUNT = 4
+        EN_PASSANT_MOVE_DIFFS_COUNT = 3
+
+        color_in_move = prev_fen.get_color()
+
+        if len(diffs) == SIMPLE_MOVE_DIFFS_COUNT:
             first_pos, first_prev, first_next = diffs[0]
             second_pos, second_prev, second_next = diffs[1]
 
@@ -207,14 +213,11 @@ class FEN_constroller:
             if first_prev == second_next and first_next == second_prev or second_prev.isdigit():
                 return Chess_move(first_pos, second_pos)
             else:
-                color_in_move = prev_fen.get_color()
                 if color_in_move == Color.WHITE and first_prev.isupper() or color_in_move == Color.BLACK and first_prev.islower():
                     return Chess_move(first_pos, second_pos)
                 else:
                     return Chess_move(second_pos, first_pos)
-                #TODO: check en passant
-        elif len(diffs) == 4:
-            print(diffs)
+        elif len(diffs) == CATLING_MOVE_DIFFS_COUNT:
             KING_SIGN = "K"
             first_pos = None
             second_pos = None
@@ -224,15 +227,18 @@ class FEN_constroller:
                 elif next.upper() == KING_SIGN:
                     second_pos = pos
             return Chess_move(first_pos, second_pos)
-                    
-            
+        elif len(diffs) == EN_PASSANT_MOVE_DIFFS_COUNT:
+            captured = "p" if color_in_move == Color.WHITE else "P"
+            first_pos = None
+            second_pos = None
+            for pos, prev, next in diffs:
+                if prev.isdigit():
+                    second_pos = pos
+                elif prev != captured:
+                    first_pos = pos
+            return Chess_move(first_pos, second_pos)
         else:
-            print("0000000000000000000000000000000000000")
-            print("prev_fen: " + prev_fen.into_str())
-            print("next_fen: " + next_fen.into_str())
-            print("diffs: " + str(diffs))
-            print("0000000000000000000000000000000000000")
-            raise Exception("Unhandeled move")
+            raise Exception("Unhandeled move: ", diffs)
 
 class ChessGame:
     def __init__(self, player_color):

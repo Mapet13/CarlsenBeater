@@ -273,6 +273,12 @@ class Test_FEN_controller(unittest.TestCase):
         move = FEN_constroller.get_diff_move(before, after)
         self.assertEqual(move, move_board)
         
+    def test_get_diff_en_passant_simple(self):
+        before = "rnbqkbnr/ppp2ppp/3p4/8/2PpP3/8/PP3PPP/RNBQKBNR b KQkq c3 0 4"
+        after = "rnbqkbnr/ppp2ppp/3p4/8/4P3/2p5/PP3PPP/RNBQKBNR w KQkq - 0 5"
+        move_board = Chess_move.from_UCI("d4c3")
+        move = FEN_constroller.get_diff_move(before, after)
+        self.assertEqual(move, move_board)
         
             
 
