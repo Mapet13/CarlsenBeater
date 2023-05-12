@@ -73,7 +73,6 @@ class FEN_split_type:
     FULL_MOVE_NUMBER = 5
 
 class FEN_content:
-
     def __init__(self, fen_str):
         self.split = fen_str.split(FEN_MAIN_SEPARATOR)
         
@@ -286,6 +285,19 @@ class Chess_move:
 
     def get_UCI(self):
         return self.move_from.into_str() + self.move_to.into_str()
+
+    @staticmethod
+    def try_from_UCI(uci):
+        STD_UCI_LEN = 4
+        if len(uci) != STD_UCI_LEN:
+            return None
+        try:
+            SINGLE_MOVE_LEN = 2
+            move_from = Chess_board_pos.from_str(uci[:SINGLE_MOVE_LEN])
+            move_to = Chess_board_pos.from_str(uci[SINGLE_MOVE_LEN:])
+            return Chess_move(move_from, move_to)
+        except:
+            return None
     
     def __eq__(self, __value: object) -> bool:
         return self.move_from == __value.move_from and self.move_to == __value.move_to
@@ -335,7 +347,6 @@ class Chess_lichess_game_data:
 def get_auth(token):
     return {"Authorization": 'Bearer {}'.format(token)}
 
-#TODO after 5 moves resign and create new game with new fen XD
 class Lichess_api_controller:
     def __init__(self, token, lichess_game_data):
         self.token = token
@@ -350,7 +361,11 @@ class Lichess_api_controller:
         headers.update(get_auth(token))
 
         response = requests.post(url, headers=headers, json=payload)
-        return Lichess_api_controller(token, Chess_lichess_game_data.from_json(response.json()))
+        try:
+            json_response = response.json()
+            return Lichess_api_controller(token, Chess_lichess_game_data.from_json(json_response))
+        except:
+            return None
     
     def abandon_game(self):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/abort"
@@ -372,13 +387,13 @@ class Lichess_api_controller:
         with requests.get(url, headers=None, stream=True) as resp:
             for line in resp.iter_lines():
                 line_str = line.decode("utf-8")
+                if not "fen" in line_str:
+                    continue
                 line_json = json.loads(line_str)
                 fen = line_json["fen"]
                 if fen:
-                    return FEN_content(fen)
+                    return fen
         return None 
-               
-
 
 
 class Chess_game_controller:
@@ -391,19 +406,16 @@ class Chess_game_controller:
         self.current_player = color if color == Color.WHITE else Color.next(color)
         self.current_fen = FEN_constroller.get_initial_fen()
         self.calculated_best_move = None 
-
-        self.lichess_controller =  Lichess_api_controller.create_new_bot_game(
-            Game_data(self.enemy_color, self.current_fen), self.token
-        )
-
-        print(f"Game started - id: {self.lichess_controller.lichess_game_data.get_id()}")
+        self.lichess_controller = None
+        self.reset_game()
 
     def abandon_game(self):
         if self.lichess_controller:
             self.lichess_controller.abandon_game()
 
     def get_current_fen(self):
-        pass
+        self.current_fen = self.lichess_controller.get_game_fen()
+        return self.current_fen
 
     def get_current_player(self):
         return self.current_player
@@ -411,80 +423,111 @@ class Chess_game_controller:
     def accept_move(self):
         self.current_player = Color.next(self.current_player)
 
-    def reject_move(self, move):
-        pass
+    def reject_move(self, wanted_move):
+        #TODO
+        raise NotImplementedError
+    
+    def get_new_fen(self):
+        new_fen = None
+        while new_fen == self.current_fen or new_fen is None:
+            new_fen = self.lichess_controller.get_game_fen()
+            if new_fen is None:
+                time.sleep(1)
+                self.reset_game()
+        return new_fen
         
     def get_best_move(self):
         if self.current_player != self.player_color:
             return
         
         if self.calculated_best_move is None:
-            last_move = self.lichess_controller.get_moves()[-1]
-            last_move = last_move.replace("+", "")
-            if not last_move[-1].isdigit():
-                raise Exception("TODO")
-            move_to = last_move[-2:]
-    
-            move_from = "a1" #TODO
-            self.calculated_best_move = Chess_move(
-                Single_board_position_controller.from_str(move_from),
-                Single_board_position_controller.from_str(move_to)
-            )
-        
+            new_fen = self.get_new_fen()
+            self.calculated_best_move = FEN_constroller.get_diff_move(self.current_fen, new_fen)
+            self.current_fen = new_fen
 
         return self.calculated_best_move
     
+    def reset_game(self):
+        if self.lichess_controller:
+            self.lichess_controller.abandon_game()
+        self.lichess_controller = None
+        while self.lichess_controller is None:
+            self.lichess_controller = Lichess_api_controller.create_new_bot_game(
+                Game_data(self.enemy_color, self.current_fen), self.token
+            )
+            time.sleep(1)
+
+        print(f"Game started - id: {self.lichess_controller.lichess_game_data.get_id()}")
+
     def make_enemy_move(self, move):
         if self.current_player != self.enemy_color or not self.lichess_controller:
             return
 
-        self.current_fen = FEN_constroller.next_move(self.current_fen, move.move_from, move.move_to)
+        self.reset_game()
         self.current_player = Color.next(self.current_player)        
         self.lichess_controller.make_move(move)
         self.calculated_best_move = None
+        self.current_fen = self.lichess_controller.get_game_fen()
 
-    
+    def is_game_over(self):
+        #TODO
+        raise NotImplementedError
         
 
 if __name__ == "__main__":
-    # TOKEN = 'lip_eMBV2qjns7LExky0LRCs'
-    # client_secrets = "eei_QPIYlTfWnRnA"
+    TOKEN = 'lip_eMBV2qjns7LExky0LRCs'
+    client_secrets = "eei_QPIYlTfWnRnA"
 
-    # chess_game_controller = Chess_game_controller(TOKEN)
-    # chess_game_controller.new_start_game(Color.WHITE)
+    chess_game_controller = Chess_game_controller(TOKEN)
+    chess_game_controller.new_start_game(Color.WHITE)
+    
+    while True:
+        player_move = chess_game_controller.get_best_move()
+        chess_game_controller.accept_move()
+        print(f"Player move: {player_move.get_UCI()}")
+        
+        move = None
+        while move is None:
+            move_str = input("Enter move: ")
+            move = Chess_move.from_UCI(move_str)
 
-    # time.sleep(4)
+        chess_game_controller.make_enemy_move(move)
+        
+        
 
-    # moves = chess_game_controller.lichess_controller.get_moves()
-    # print(moves)
-    # print(chess_game_controller.get_best_move().move_to.into_str())
-    # chess_game_controller.accept_move()
-
-    # chess_game_controller.lichess_controller.get_games()
-
-    # # time.sleep(4)
-
-    # # move_from = Single_board_position_controller.from_str('e7')
-    # # move_to = Single_board_position_controller.from_str('e5')
-    # # chess_move = Chess_move(move_from, move_to)
-
-    # # chess_game_controller.make_enemy_move(chess_move)
 
     # # time.sleep(4)
 
     # # moves = chess_game_controller.lichess_controller.get_moves()
     # # print(moves)
-
     # # print(chess_game_controller.get_best_move().move_to.into_str())
     # # chess_game_controller.accept_move()
 
+    # # chess_game_controller.lichess_controller.get_games()
 
-    # # time.sleep(4)
+    # # # time.sleep(4)
 
-    # chess_game_controller.abandon_game() 
+    # # # move_from = Single_board_position_controller.from_str('e7')
+    # # # move_to = Single_board_position_controller.from_str('e5')
+    # # # chess_move = Chess_move(move_from, move_to)
+
+    # # # chess_game_controller.make_enemy_move(chess_move)
+
+    # # # time.sleep(4)
+
+    # # # moves = chess_game_controller.lichess_controller.get_moves()
+    # # # print(moves)
+
+    # # # print(chess_game_controller.get_best_move().move_to.into_str())
+    # # # chess_game_controller.accept_move()
 
 
-    prev_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    next_fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+    # # # time.sleep(4)
 
-    FEN_constroller.get_diff_move(prev_fen, next_fen)
+    # # chess_game_controller.abandon_game() 
+
+
+    # prev_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    # next_fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+
+    # FEN_constroller.get_diff_move(prev_fen, next_fen)
