@@ -1,4 +1,5 @@
-import requests
+# import urequests
+import local_urequests as urequests
 import time
 import json
 
@@ -360,7 +361,7 @@ class Lichess_api_controller:
         headers = {"Content-Type": "application/json"}
         headers.update(get_auth(token))
 
-        response = requests.post(url, headers=headers, json=payload)
+        response = urequests.post(url, headers=headers, json=payload)
         try:
             json_response = response.json()
             return Lichess_api_controller(token, Chess_lichess_game_data.from_json(json_response))
@@ -369,30 +370,31 @@ class Lichess_api_controller:
     
     def abandon_game(self):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/abort"
-        requests.post(url, headers=get_auth(self.token))
+        urequests.post(url, headers=get_auth(self.token))
 
     def get_moves(self):
-        url = f"https://lichess.org/game/export/{self.lichess_game_data.get_id()}"
-        data = requests.get(url, headers={"Accept": "application/json"})
+        url = "https://lichess.org/game/export/" + self.lichess_game_data.get_id()
+        data = urequests.get(url, headers={"Accept": "application/json"})
         return data.json()["moves"].split(" ")
     
     def make_move(self, move):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/move/" + move.get_UCI()
-        requests.post(url, headers=get_auth(self.token))
+        urequests.post(url, headers=get_auth(self.token))
         pass
 
     def get_game_fen(self):
-        url = f'https://lichess.org/api/stream/game/{self.lichess_game_data.get_id()}'
+        url = 'https://lichess.org/api/stream/game/' + self.lichess_game_data.get_id()
         
-        with requests.get(url, headers=None, stream=True) as resp:
-            for line in resp.iter_lines():
-                line_str = line.decode("utf-8")
-                if not "fen" in line_str:
-                    continue
-                line_json = json.loads(line_str)
-                fen = line_json["fen"]
-                if fen:
-                    return fen
+        # with urequests.get(url, headers=None, stream=True) as resp:
+        resp = urequests.get(url, headers={}, stream=True)
+        for line in resp.iter_lines():
+            line_str = line.decode("utf-8")
+            if not "fen" in line_str:
+                continue
+            line_json = json.loads(line_str)
+            fen = line_json["fen"]
+            if fen:
+                return fen
         return None 
 
 
@@ -457,7 +459,7 @@ class Chess_game_controller:
             )
             time.sleep(1)
 
-        print(f"Game started - id: {self.lichess_controller.lichess_game_data.get_id()}")
+        print("Game started - id: "+self.lichess_controller.lichess_game_data.get_id())
 
     def make_enemy_move(self, move):
         if self.current_player != self.enemy_color or not self.lichess_controller:
@@ -484,7 +486,7 @@ if __name__ == "__main__":
     while True:
         player_move = chess_game_controller.get_best_move()
         chess_game_controller.accept_move()
-        print(f"Player move: {player_move.get_UCI()}")
+        print("Player move:" + player_move.get_UCI())
         
         move = None
         while move is None:

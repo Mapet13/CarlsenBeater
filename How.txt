@@ -1,0 +1,7 @@
+# Instalacja micropythona
+sudo apt-get install micropython
+
+# Uruchomienie micropythonem
+micropython chess_lib.py
+
+# local_urequests.py to kopia urequests, bo u mnie nie działało pip install micropython-urequests
