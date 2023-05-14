@@ -1,5 +1,4 @@
-# import urequests
-import local_urequests as urequests
+import local_mrequests as requests
 import time
 import json
 
@@ -361,7 +360,7 @@ class Lichess_api_controller:
         headers = {"Content-Type": "application/json"}
         headers.update(get_auth(token))
 
-        response = urequests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload)
         try:
             json_response = response.json()
             return Lichess_api_controller(token, Chess_lichess_game_data.from_json(json_response))
@@ -370,32 +369,29 @@ class Lichess_api_controller:
     
     def abandon_game(self):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/abort"
-        urequests.post(url, headers=get_auth(self.token))
+        requests.post(url, headers=get_auth(self.token))
 
     def get_moves(self):
         url = "https://lichess.org/game/export/" + self.lichess_game_data.get_id()
-        data = urequests.get(url, headers={"Accept": "application/json"})
+        data = requests.get(url, headers={"Accept": "application/json"})
         return data.json()["moves"].split(" ")
     
     def make_move(self, move):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/move/" + move.get_UCI()
-        urequests.post(url, headers=get_auth(self.token))
+        requests.post(url, headers=get_auth(self.token))
         pass
 
     def get_game_fen(self):
         url = 'https://lichess.org/api/stream/game/' + self.lichess_game_data.get_id()
         
-        # with urequests.get(url, headers=None, stream=True) as resp:
-        resp = urequests.get(url, headers={}, stream=True)
-        for line in resp.iter_lines():
-            line_str = line.decode("utf-8")
-            if not "fen" in line_str:
-                continue
-            line_json = json.loads(line_str)
-            fen = line_json["fen"]
-            if fen:
-                return fen
-        return None 
+        resp = requests.get(url, headers={})
+        resp_json = resp.json()
+        if 'fen' in resp_json:
+            print("FEN:", resp_json['fen'])
+            return resp_json['fen']
+        else:
+            print("Fen not detected in", resp.content)
+            return None
 
 
 class Chess_game_controller:
@@ -436,6 +432,7 @@ class Chess_game_controller:
             if new_fen is None:
                 time.sleep(1)
                 self.reset_game()
+            print(new_fen == self.current_fen, new_fen is None)
         return new_fen
         
     def get_best_move(self):
@@ -484,7 +481,9 @@ if __name__ == "__main__":
     chess_game_controller.new_start_game(Color.WHITE)
     
     while True:
+        print("Get best move")
         player_move = chess_game_controller.get_best_move()
+        print("Accept move")
         chess_game_controller.accept_move()
         print("Player move:" + player_move.get_UCI())
         
