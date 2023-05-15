@@ -76,6 +76,10 @@ class FEN_content:
     def __init__(self, fen_str):
         self.split = fen_str.split(FEN_MAIN_SEPARATOR)
         
+    @staticmethod
+    def has_same_board(fen1, fen2):
+        return FEN_content(fen1).get(FEN_split_type.BOARD) == FEN_content(fen2).get(FEN_split_type.BOARD)
+        
     def into_str(self):
         return " ".join(self.split)
     
