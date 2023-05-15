@@ -470,7 +470,8 @@ class Chess_game_controller:
         self.current_player = Color.next(self.current_player)        
         self.lichess_controller.make_move(move)
         self.calculated_best_move = None
-        self.current_fen = self.lichess_controller.get_game_fen()
+        self.current_fen = FEN_constroller.next_move(self.current_fen, move)
+
 
     def is_game_over(self):
         #TODO
