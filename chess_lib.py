@@ -498,16 +498,19 @@ def best_move(fen):
     }
 
 def respond_to_best_move(fen, chess_game_controller, move_str):
-    if chess_game_controller is None:
-        pass
+    # if chess_game_controller is None:
+    #     pass
         
-    chess_game_controller.accept_move()
-    move = Chess_move.from_UCI(move_str)
+    # chess_game_controller.accept_move()
+    # move = Chess_move.from_UCI(move_str)
 
-    chess_game_controller.make_enemy_move(move)
-    new_fen = chess_game_controller.current_fen # FEN AFTER ENEMY RESPONDED
+    # chess_game_controller.make_enemy_move(move)
+    # new_fen = chess_game_controller.current_fen # FEN AFTER ENEMY RESPONDED
 
-    return new_fen   
+    # return new_fen
+    move_from = Chess_board_pos.from_str(move_str[:2])
+    move_to = Chess_board_pos.from_str(move_str[2:])
+    return FEN_constroller.next_move(fen, move_from, move_to)
 
 if __name__ == "__main__":
     TOKEN = 'lip_eMBV2qjns7LExky0LRCs'

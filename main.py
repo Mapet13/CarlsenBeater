@@ -10,9 +10,10 @@ import networking.start_wifi
 
 # 0 - start program
 # 1 - reset fen and start program
-# 2 - reset fen and start as black
+# 2 - reset fen and start as black (and input whites move first)
 # 3 - input position
 # 4 - accept position
+# 5 - restart position input
 
 # Led on - working
 # Led off - turned off
@@ -39,7 +40,7 @@ try:
     def signal_clickdetected():
         playSound(300, duration=0.1)
 
-    def readClickNumber(clicker_index=3, termination_index=4):
+    def readClickNumber(clicker_index=3, termination_index=4, reset_index=5):
         print("Reading click number")
         sleep(0.3)
         clicks = 0
@@ -58,6 +59,10 @@ try:
                 if buttons[termination_index].value():
                     print("Returning", clicks, "clicks")
                     return clicks
+                if buttons[reset_index].value():
+                    clicks = 0
+                    print("Resetting clicks")
+                    sleep(0.1)
         finally:
             buzzer.duty_u16(0)
 
