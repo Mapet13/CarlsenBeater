@@ -497,52 +497,17 @@ def best_move(fen):
         "mid_fen": mid_fen
     }
 
-def respond_to_best_move(mid_fen, chess_game_controller, move_str):
-    chess_game_controller.accept_move()
-
-    # move_str = input("Enter move: ") # ENTER ENEMY RESPONSE
-    move = Chess_move.from_UCI(move_str)
-
-    chess_game_controller.make_enemy_move(move)
-    new_fen = chess_game_controller.current_fen # FEN AFTER ENEMY RESPONDED
-    # print("NEWFEN", new_fen)
-
-    return new_fen
+def respond_to_best_move(fen, chess_game_controller, move_str):
+    if chess_game_controller is None:
+        pass
         
-def fen_and_move_to_next_move(fen):
-    # Problem - najpierw się rusza przeciwnik (losowo), a potem gracz
-    # Zamiast tego potrzeba samą odpowiedź na ruch?
-    TOKEN = 'lip_eMBV2qjns7LExky0LRCs'
-    client_secrets = "eei_QPIYlTfWnRnA"
-
-    starting_fen = fen
-    # print("STARTFEN", starting_fen)
-
-    chess_game_controller = Chess_game_controller(TOKEN)
-    chess_game_controller.new_start_game(Color.WHITE, fen)
-
-    print("Get best move")
-    player_move = chess_game_controller.get_best_move()
-    mid_fen = chess_game_controller.current_fen
-    # print("MIDFEN", mid_fen)
-
-    # return FEN_constroller.get_diff_move(starting_fen, mid_fen)
-    
-    print("BEST MOVE ------------:", FEN_constroller.get_diff_move(starting_fen, mid_fen)) # BEST MOVE FROM GIVEN FEN
-
-    # print("Accept move")
     chess_game_controller.accept_move()
-    # print("Player move:" + player_move.get_UCI())
-
-
-    move_str = input("Enter move: ") # ENTER ENEMY RESPONSE
     move = Chess_move.from_UCI(move_str)
 
     chess_game_controller.make_enemy_move(move)
     new_fen = chess_game_controller.current_fen # FEN AFTER ENEMY RESPONDED
-    # print("NEWFEN", new_fen)
 
-    return new_fen, FEN_constroller.get_diff_move(mid_fen, new_fen)    
+    return new_fen   
 
 if __name__ == "__main__":
     TOKEN = 'lip_eMBV2qjns7LExky0LRCs'
@@ -603,3 +568,4 @@ if __name__ == "__main__":
     # next_fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
 
     # FEN_constroller.get_diff_move(prev_fen, next_fen)
+
