@@ -15,11 +15,14 @@ import networking.start_wifi
 # 3 - input position
 # 4 - accept position
 # 5 - restart position input
+# 6 - ignore best move
 
 # LED SIGNALS:
 # Led on - executing program
 # Led off - turned off
 # Led flickers - error
+
+# TODO: Should not be able to ignore more then once.
 
 try:
     # Peripherals
@@ -42,12 +45,23 @@ try:
         
     def signal_clickdetected():
         playSound(300, duration=0.1)
+        
+    def signal_moveignored():
+        for i in range(4):
+            playSound(30, duration=0.5)
+            sleep(0.2)
+            
+    def signal_switchingsides():
+        playSound(500, duration=0.5)
 
-    def readClickNumber(clicker_index=3, termination_index=4, reset_index=5):
-        print("Reading click number")
+    ignore_rest = False
+    def readClickNumber(clicker_index=3, termination_index=4, reset_index=5, ignore_index=6):
+        global ignore_rest
+        if not ignore_rest:
+            print("Reading click number")
+            signal_inputprompt()
         sleep(0.3)
         clicks = 0
-        signal_inputprompt()
         previous_clicker_value = False
         try:
             while True:
@@ -66,6 +80,10 @@ try:
                     clicks = 0
                     print("Resetting clicks")
                     sleep(0.1)
+                if buttons[ignore_index].value() or ignore_rest:
+                    print("Ignoring best move")
+                    ignore_rest = True
+                    return 0
         finally:
             buzzer.duty_u16(0)
 
@@ -139,23 +157,47 @@ try:
     # Modifying FEN with enemy move
     print("Input enemy move")
     move_clicks = [readClickNumber() for _ in range(4)]
-    move = click_num_to_move(move_clicks)    
-    print("Chosen move:", move)
-    if not start_as_black:
-        new_fen = chess.respond_to_best_move(best_move_data["mid_fen"], best_move_data["controler"], move)
-    else:
-        new_fen = chess.respond_to_best_move(fen, None, move)
+    
+    # Player can choose to ignore dictated move
+    if not ignore_rest:
+        move = click_num_to_move(move_clicks)    
+        print("Chosen move:", move)
+        if not start_as_black:
+            new_fen = chess.respond_to_best_move(best_move_data["mid_fen"], best_move_data["controler"], move)
+        else:
+            new_fen = chess.respond_to_best_move(fen, None, move)
 
-    # Saving game state
-    print()
-    print("New fen:", new_fen)        
-    f = open("fen.txt", "w")
-    f.write(new_fen)
-    f.close()
+        # Saving game state
+        print()
+        print("New fen:", new_fen)        
+        f = open("fen.txt", "w")
+        f.write(new_fen)
+        f.close()
+            
+        # Resetting
+        led.off()
+        machine.reset()
+    else:
+        signal_moveignored()
+        ignore_rest = False
+        print("Input desired move")
+        move_clicks = [readClickNumber() for _ in range(4)]
+        move = click_num_to_move(move_clicks)
+        fen = chess.respond_to_best_move(fen, None, move)
+        signal_switchingsides()
+        print("Input enemy move")
+        move_clicks = [readClickNumber() for _ in range(4)]
+        move = click_num_to_move(move_clicks)
+        fen = chess.respond_to_best_move(fen, None, move)
         
-    # Resetting
-    led.off()
-    machine.reset()
+        # Saving state
+        f = open("fen.txt", "w")
+        f.write(fen)
+        f.close()
+            
+        # Resetting
+        led.off()
+        machine.reset()
 
 except Exception as e:
     print(e)
@@ -166,6 +208,7 @@ except Exception as e:
         sleep(0.2)
 finally:
     led.off()
+
 
 
 
