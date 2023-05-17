@@ -8,6 +8,7 @@ import os
 from utime import sleep
 import networking.start_wifi
 
+# BUTTONS:
 # 0 - start program
 # 1 - reset fen and start program
 # 2 - reset fen and start as black (and input whites move first)
@@ -15,11 +16,13 @@ import networking.start_wifi
 # 4 - accept position
 # 5 - restart position input
 
-# Led on - working
+# LED SIGNALS:
+# Led on - executing program
 # Led off - turned off
 # Led flickers - error
 
 try:
+    # Peripherals
     buzzer = PWM(Pin(15))
     pin_nums = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     buttons = [Pin(i, Pin.IN, Pin.PULL_DOWN) for i in pin_nums]
@@ -94,7 +97,7 @@ try:
         play_n_sounds(int(move_str[3]))
 
 
-    # Starting the iteration
+    # Awaiting user signal to start
     reset_fen = False
     start_as_black = False
     print("WAITING TO START")
@@ -111,6 +114,7 @@ try:
             break
     print("STARTING")
 
+    # Resetting game state
     if "fen.txt" not in os.listdir(".") or reset_fen:
         if not reset_fen:
             print("Not found", os.listdir("."))
@@ -118,7 +122,7 @@ try:
         f.write("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
         f.close()
         
-            
+    # Reading game state
     f = open("fen.txt", "r")
     for line in f:
         fen = line
@@ -126,30 +130,30 @@ try:
 
     print("FEN READ")
 
+    # Dictating best move
     if not start_as_black:
         best_move_data = chess.best_move(fen)
         print("Best move:", best_move_data["move"])
         move_to_sound(best_move_data["move"])
 
+    # Modifying FEN with enemy move
     print("Input enemy move")
     move_clicks = [readClickNumber() for _ in range(4)]
-    move = click_num_to_move(move_clicks)
-    
+    move = click_num_to_move(move_clicks)    
     print("Chosen move:", move)
     if not start_as_black:
         new_fen = chess.respond_to_best_move(best_move_data["mid_fen"], best_move_data["controler"], move)
     else:
         new_fen = chess.respond_to_best_move(fen, None, move)
 
+    # Saving game state
     print()
-    print()
-    print("New fen:", new_fen)
-        
+    print("New fen:", new_fen)        
     f = open("fen.txt", "w")
     f.write(new_fen)
     f.close()
         
-    #playSound(400)
+    # Resetting
     led.off()
     machine.reset()
 
@@ -160,6 +164,8 @@ except Exception as e:
         sleep(0.2)
         led.off()
         sleep(0.2)
+finally:
+    led.off()
 
 
 
