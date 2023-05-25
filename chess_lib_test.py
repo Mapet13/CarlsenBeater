@@ -187,6 +187,46 @@ class Test_FEN_controller(unittest.TestCase):
         result = FEN_constroller.next_move(test_fen, move_from, move_to)
         self.assertEqual(result, EXPECTED_FEN)
 
+    def test_castle_white_long_move(self):
+        test_fen     = "r1bqkbnr/ppp3pp/2n1pp2/3p4/3P4/2NQB3/PPP1PPPP/R3KBNR w KQkq - 0 3"
+        EXPECTED_FEN = "r1bqkbnr/ppp3pp/2n1pp2/3p4/3P4/2NQB3/PPP1PPPP/2KR1BNR b kq - 0 3"
+
+        move_from = Chess_board_pos.from_str("e1")
+        move_to = Chess_board_pos.from_str("c1")
+
+        result = FEN_constroller.next_move(test_fen, move_from, move_to)
+        self.assertEqual(result, EXPECTED_FEN)
+        
+    def test_castle_white_short_move(self):
+        test_fen     = "r1bqkbnr/ppp3pp/8/3ppp2/3n2P1/2NQBN1B/PPP1PP1P/R3K2R w KQ - 0 6"
+        EXPECTED_FEN = "r1bqkbnr/ppp3pp/8/3ppp2/3n2P1/2NQBN1B/PPP1PP1P/R4RK1 b - - 0 6"
+
+        move_from = Chess_board_pos.from_str("e1")
+        move_to = Chess_board_pos.from_str("g1")
+
+        result = FEN_constroller.next_move(test_fen, move_from, move_to)
+        self.assertEqual(result, EXPECTED_FEN)
+    
+    def test_castle_black_long_move(self):
+        test_fen     = "r3kbnr/pppbq1pp/2n1pp2/3p4/3P1B2/1PNQP3/P1P2PPP/R3KBNR b KQkq - 0 5"
+        EXPECTED_FEN = "2kr1bnr/pppbq1pp/2n1pp2/3p4/3P1B2/1PNQP3/P1P2PPP/R3KBNR w KQ - 0 5"
+
+        move_from = Chess_board_pos.from_str("e8")
+        move_to = Chess_board_pos.from_str("c8")
+
+        result = FEN_constroller.next_move(test_fen, move_from, move_to)
+        self.assertEqual(result, EXPECTED_FEN)
+        
+    def test_castle_black_short_move(self):
+        test_fen     = "r2qk2r/pppbb1pp/5n2/1N1ppp2/2Qn1BP1/5N1B/PPP1PP1P/2KR3R b kq - 7 9"
+        EXPECTED_FEN = "r2q1rk1/pppbb1pp/5n2/1N1ppp2/2Qn1BP1/5N1B/PPP1PP1P/2KR3R w - - 7 9"
+
+        move_from = Chess_board_pos.from_str("e8")
+        move_to = Chess_board_pos.from_str("g8")
+
+        result = FEN_constroller.next_move(test_fen, move_from, move_to)
+        self.assertEqual(result, EXPECTED_FEN)
+
 
     def assert_moves_diffs(self, initial_fen, moves):
         last_fen = initial_fen

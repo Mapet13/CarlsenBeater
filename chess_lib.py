@@ -100,6 +100,17 @@ class FEN_content:
 
     def toggle_player(self):
         self.set_color(Color.next(self.get_color()))
+        
+    def remove_castle_rights(self, color):
+        castling = self.get(FEN_split_type.CASTLING)
+        if color == Color.WHITE:
+            rm_fn = lambda ch: ch.isupper()
+        else:
+            rm_fn = lambda ch: ch.islower()
+        result = ''.join(ch for ch in castling if not rm_fn(ch))
+        if len(result) == 0:
+            result = "-"
+        self.set(FEN_split_type.CASTLING, result)
 
     def get_row(self, row):
         return self.get(FEN_split_type.BOARD).split(FEN_BOARD_SEPARATOR)[CHESS_BOARD_MAX_INDEX - row]
@@ -175,6 +186,13 @@ class FEN_content:
         return piece
 
 
+def is_castle_move(piece, move_from, move_to):
+    if piece == "K" and move_from == Chess_board_pos.from_str("e1"):
+        return move_to == Chess_board_pos.from_str("c1") or move_to == Chess_board_pos.from_str("g1")
+    if piece == "k" and move_from == Chess_board_pos.from_str("e8"):
+        return move_to == Chess_board_pos.from_str("c8") or move_to == Chess_board_pos.from_str("g8")
+    return False
+
 class FEN_constroller:
     @staticmethod
     def get_initial_fen():
@@ -183,9 +201,23 @@ class FEN_constroller:
     @staticmethod
     def next_move(fen, move_from, move_to):
         fen = FEN_content(fen)
-        fen.toggle_player()
         piece = fen.pop_piece(move_from.row, move_from.column)
+    
         fen.set_position(move_to.row, move_to.column, piece)
+        
+        if is_castle_move(piece, move_from, move_to):
+            if move_to.column == 2:
+                rook_from = Chess_board_pos(move_from.row, 0)
+                rook_to = Chess_board_pos(move_from.row, 3)
+            else:
+                rook_from = Chess_board_pos(move_from.row, 7)
+                rook_to = Chess_board_pos(move_from.row, 5)
+                
+            fen.remove_castle_rights(Color.WHITE if piece.isupper() else Color.BLACK)
+            
+            return FEN_constroller.next_move(fen.into_str(), rook_from, rook_to) 
+        
+        fen.toggle_player()
         return fen.into_str()
     
     @staticmethod
@@ -370,6 +402,16 @@ class Lichess_api_controller:
             return Lichess_api_controller(token, Chess_lichess_game_data.from_json(json_response))
         except:
             return None
+        
+    def get_games(self):
+        url = "https://lichess.org/api/games/user/CarlsenBeater"
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(url, headers=headers)
+        return response
+    
+    def abandon_game_by_id(self, game_id):
+        url = "https://lichess.org/api/board/game/" + game_id + "/abort"
+        requests.post(url, headers=get_auth(self.token))
     
     def abandon_game(self):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/abort"
@@ -377,7 +419,7 @@ class Lichess_api_controller:
 
     def get_moves(self):
         url = f"https://lichess.org/game/export/{self.lichess_game_data.get_id()}"
-        data = requests.get(url, headers={"Accept": "application/json"})
+        data = requests.get(url, headers={})
         return data.json()["moves"].split(" ")
     
     def make_move(self, move):
@@ -484,18 +526,26 @@ if __name__ == "__main__":
 
     chess_game_controller = Chess_game_controller(TOKEN)
     chess_game_controller.new_start_game(Color.WHITE)
-    
-    while True:
-        player_move = chess_game_controller.get_best_move()
-        chess_game_controller.accept_move()
-        print(f"Player move: {player_move.get_UCI()}")
-        
-        move = None
-        while move is None:
-            move_str = input("Enter move: ")
-            move = Chess_move.from_UCI(move_str)
 
-        chess_game_controller.make_enemy_move(move)
+    while True:
+
+        
+        id_game = chess_game_controller.lichess_controller.get_games()
+        print(id_game)
+        chess_game_controller.lichess_controller.abandon_game_by_id(id_game)
+        print("Game abandoned: " + id_game)
+
+    # while True:
+    #     player_move = chess_game_controller.get_best_move()
+    #     chess_game_controller.accept_move()
+    #     print(f"Player move: {player_move.get_UCI()}")
+        
+    #     move = None
+    #     while move is None:
+    #         move_str = input("Enter move: ")
+    #         move = Chess_move.from_UCI(move_str)
+
+    #     chess_game_controller.make_enemy_move(move)
         
         
 
