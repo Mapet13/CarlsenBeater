@@ -1,4 +1,4 @@
-import local_mrequests as requests
+import chess_project.local_mrequests as requests
 import time
 import json
 
@@ -100,7 +100,7 @@ class FEN_content:
 
     def toggle_player(self):
         self.set_color(Color.next(self.get_color()))
-        
+
     def remove_castle_rights(self, color):
         castling = self.get(FEN_split_type.CASTLING)
         if color == Color.WHITE:
@@ -111,6 +111,13 @@ class FEN_content:
         if len(result) == 0:
             result = "-"
         self.set(FEN_split_type.CASTLING, result)
+
+    def is_castle_move(self, rinpiece, move_from, move_to):
+        if piece == "K" and move_from == Chess_board_pos.from_str("e1"):
+            return move_to == Chess_board_pos.from_str("c1") or move_to == Chess_board_pos.from_str("g1")
+        if piece == "k" and move_from == Chess_board_pos.from_str("e8"):
+            return move_to == Chess_board_pos.from_str("c8") or move_to == Chess_board_pos.from_str("g8")
+        return False
 
     def get_row(self, row):
         return self.get(FEN_split_type.BOARD).split(FEN_BOARD_SEPARATOR)[CHESS_BOARD_MAX_INDEX - row]
@@ -185,12 +192,6 @@ class FEN_content:
 
         return piece
 
-def is_castle_move(piece, move_from, move_to):
-    if piece == "K" and move_from == Chess_board_pos.from_str("e1"):
-        return move_to == Chess_board_pos.from_str("c1") or move_to == Chess_board_pos.from_str("g1")
-    if piece == "k" and move_from == Chess_board_pos.from_str("e8"):
-        return move_to == Chess_board_pos.from_str("c8") or move_to == Chess_board_pos.from_str("g8")
-    return False
 
 class FEN_constroller:
     @staticmethod
@@ -200,11 +201,10 @@ class FEN_constroller:
     @staticmethod
     def next_move(fen, move_from, move_to):
         fen = FEN_content(fen)
+        fen.toggle_player()
         piece = fen.pop_piece(move_from.row, move_from.column)
-    
         fen.set_position(move_to.row, move_to.column, piece)
-        
-        if is_castle_move(piece, move_from, move_to):
+        if fen.is_castle_move(piece, move_from, move_to):
             if move_to.column == 2:
                 rook_from = Chess_board_pos(move_from.row, 0)
                 rook_to = Chess_board_pos(move_from.row, 3)
@@ -401,6 +401,16 @@ class Lichess_api_controller:
             return Lichess_api_controller(token, Chess_lichess_game_data.from_json(json_response))
         except:
             return None
+        
+    def get_games(self):
+        url = "https://lichess.org/api/games/user/CarlsenBeater"
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(url, headers=headers)
+        return response
+    
+    def abandon_game_by_id(self, game_id):
+        url = "https://lichess.org/api/board/game/" + game_id + "/abort"
+        requests.post(url, headers=get_auth(self.token))
     
     def abandon_game(self):
         url = "https://lichess.org/api/board/game/" + self.lichess_game_data.get_id() + "/abort"
@@ -529,19 +539,9 @@ def best_move(fen):
     }
 
 def respond_to_best_move(fen, chess_game_controller, move_str):
-    # if chess_game_controller is None:
-    #     pass
-        
-    # chess_game_controller.accept_move()
-    # move = Chess_move.from_UCI(move_str)
-
-    # chess_game_controller.make_enemy_move(move)
-    # new_fen = chess_game_controller.current_fen # FEN AFTER ENEMY RESPONDED
-
-    # return new_fen
     move_from = Chess_board_pos.from_str(move_str[:2])
     move_to = Chess_board_pos.from_str(move_str[2:])
-    return FEN_constroller.next_move(fen, move_from, move_to)
+    return FEN_constroller.next_move(fen, move_from, move_to)  
 
 if __name__ == "__main__":
     TOKEN = 'lip_eMBV2qjns7LExky0LRCs'
@@ -602,4 +602,5 @@ if __name__ == "__main__":
     # next_fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
 
     # FEN_constroller.get_diff_move(prev_fen, next_fen)
+
 
