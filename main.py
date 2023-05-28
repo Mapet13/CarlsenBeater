@@ -16,6 +16,7 @@ import networking.start_wifi
 # 4 - accept position
 # 5 - restart position input
 # 6 - ignore best move
+# 7 - repeat best move
 
 # LED SIGNALS:
 # Led on - executing program
@@ -55,7 +56,7 @@ try:
         playSound(500, duration=0.5)
 
     ignore_rest = False
-    def readClickNumber(clicker_index=3, termination_index=4, reset_index=5, ignore_index=6):
+    def readClickNumber(clicker_index=3, termination_index=4, reset_index=5, ignore_index=6, ignoring_blocked=False, repeat_index=7, best_move=None):
         global ignore_rest
         if not ignore_rest:
             print("Reading click number")
@@ -80,7 +81,10 @@ try:
                     clicks = 0
                     print("Resetting clicks")
                     sleep(0.1)
-                if buttons[ignore_index].value() or ignore_rest:
+                if buttons[repeat_index].value():
+                    if best_move is not None:
+                        move_to_sound(best_move)
+                if not ignoring_blocked and (buttons[ignore_index].value() or ignore_rest):
                     print("Ignoring best move")
                     ignore_rest = True
                     return 0
@@ -156,7 +160,7 @@ try:
 
     # Modifying FEN with enemy move
     print("Input enemy move")
-    move_clicks = [readClickNumber() for _ in range(4)]
+    move_clicks = [readClickNumber(best_move=best_move_data["move"]) for _ in range(4)]
     
     # Player can choose to ignore dictated move
     if not ignore_rest:
@@ -180,13 +184,15 @@ try:
     else:
         signal_moveignored()
         ignore_rest = False
+        
         print("Input desired move")
-        move_clicks = [readClickNumber() for _ in range(4)]
+        move_clicks = [readClickNumber(ignoring_blocked=True) for _ in range(4)]
         move = click_num_to_move(move_clicks)
         fen = chess.respond_to_best_move(fen, None, move)
         signal_switchingsides()
+        
         print("Input enemy move")
-        move_clicks = [readClickNumber() for _ in range(4)]
+        move_clicks = [readClickNumber(ignoring_blocked=True) for _ in range(4)]
         move = click_num_to_move(move_clicks)
         fen = chess.respond_to_best_move(fen, None, move)
         
@@ -208,7 +214,4 @@ except Exception as e:
         sleep(0.2)
 finally:
     led.off()
-
-
-
 
